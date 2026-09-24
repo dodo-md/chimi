@@ -89,13 +89,19 @@ func (h *Hub) serveWS(pass string) http.Handler {
 			return
 		}
 		h.register <- conn
-		defer func() { h.unregister <- conn }()
-		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
-				return
-			}
-		}
+		go h.read(conn)
 	})
+}
+
+func (h *Hub) read(conn *websocket.Conn) {
+	defer func() { h.unregister <- conn }()
+	for {
+		var msg protocol.Message
+		if err := conn.ReadJSON(&msg); err != nil {
+			return
+		}
+		h.broadcast <- msg
+	}
 }
 
 func passOK(got, want string) bool {
