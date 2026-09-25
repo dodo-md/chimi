@@ -2,7 +2,9 @@ package main
 
 import (
 	"crypto/subtle"
+	"log"
 	"net/http"
+	"os"
 	"sync"
 
 	"chimi/internal/protocol"
@@ -101,6 +103,22 @@ func (h *Hub) read(conn *websocket.Conn) {
 			return
 		}
 		h.broadcast <- msg
+	}
+}
+
+func main() {
+	pass := os.Getenv("CHIMI_PASS")
+	if pass == "" {
+		log.Fatal("CHIMI_PASS is required")
+	}
+
+	hub := newHub()
+	go hub.run()
+
+	addr := ":8080"
+	log.Printf("chimi relay listening on %s", addr)
+	if err := http.ListenAndServe(addr, hub.serveWS(pass)); err != nil {
+		log.Fatal(err)
 	}
 }
 
